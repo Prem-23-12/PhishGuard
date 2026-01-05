@@ -16,3 +16,13 @@ PhishGuard is a full-stack phishing URL detection tool that helps users identify
 - Security: URL parsing, regex-based detection
 
 ## 📂 Project Structure
+PhishGuard/
+│
+├── backend/
+│ ├── phish.py
+│
+├── frontend/
+│ └── index.html
+│
+├── README.md
+└── .gitignore
