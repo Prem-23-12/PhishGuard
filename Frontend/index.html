@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PhishGuard</title>
+
+<style>
+    body {
+        font-family: "Segoe UI", sans-serif;
+        background: linear-gradient(135deg, #020617, #0f172a);
+        color: #e5e7eb;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .card {
+        width: 460px;
+        background: #020617;
+        border-radius: 14px;
+        padding: 25px;
+        box-shadow: 0 25px 50px rgba(0,0,0,.7);
+    }
+
+    h2 {
+        text-align: center;
+        color: #38bdf8;
+        margin-bottom: 4px;
+    }
+
+    .tagline {
+        text-align: center;
+        font-size: 13px;
+        color: #94a3b8;
+        margin-bottom: 16px;
+    }
+
+    input {
+        width: 100%;
+        padding: 12px;
+        border-radius: 6px;
+        border: none;
+        outline: none;
+        font-size: 14px;
+    }
+
+    button {
+        width: 100%;
+        margin-top: 12px;
+        padding: 12px;
+        border-radius: 6px;
+        border: none;
+        font-weight: bold;
+        font-size: 15px;
+        cursor: pointer;
+        background: #38bdf8;
+        color: #020617;
+    }
+
+    button:hover {
+        background: #0ea5e9;
+    }
+
+    .loading {
+        text-align: center;
+        margin-top: 12px;
+        font-size: 14px;
+        color: #94a3b8;
+        display: none;
+    }
+
+    .result {
+        margin-top: 18px;
+        padding: 14px;
+        border-radius: 10px;
+        display: none;
+    }
+
+    .safe {
+        border: 1px solid #22c55e;
+        color: #22c55e;
+        background: rgba(34,197,94,.15);
+    }
+
+    .phish {
+        border: 1px solid #ef4444;
+        color: #ef4444;
+        background: rgba(239,68,68,.15);
+    }
+
+    .invalid {
+        border: 1px solid #facc15;
+        color: #facc15;
+        background: rgba(250,204,21,.15);
+    }
+
+    .risk-bar {
+        background: #1e293b;
+        height: 8px;
+        border-radius: 6px;
+        margin-top: 6px;
+        overflow: hidden;
+    }
+
+    .risk-fill {
+        height: 100%;
+        width: 0%;
+        border-radius: 6px;
+        transition: width .4s ease;
+    }
+
+    ul {
+        margin-top: 10px;
+        padding-left: 18px;
+        font-size: 13px;
+    }
+
+    footer {
+        text-align: center;
+        margin-top: 16px;
+        font-size: 12px;
+        color: #64748b;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="card">
+    <!-- LOGO -->
+    <div style="text-align:center; font-size:38px;">🛡️</div>
+
+    <h2>PhishGuard</h2>
+    <div class="tagline">Protect yourself from malicious links</div>
+
+    <input id="urlInput" autofocus placeholder="Enter URL (https://example.com)">
+    <button onclick="checkUrl()">Scan URL</button>
+
+    <div id="loading" class="loading">🔍 Scanning URL…</div>
+
+    <div id="resultBox" class="result">
+        <strong id="status"></strong><br>
+        <span id="score"></span>
+
+        <div class="risk-bar">
+            <div id="riskFill" class="risk-fill"></div>
+        </div>
+
+        <ul id="reasons"></ul>
+    </div>
+
+    <footer>
+        🔐 Think before you click.
+    </footer>
+</div>
+
+<script>
+function checkUrl() {
+    const url = document.getElementById("urlInput").value.trim();
+    const loading = document.getElementById("loading");
+    const resultBox = document.getElementById("resultBox");
+    const statusEl = document.getElementById("status");
+    const scoreEl = document.getElementById("score");
+    const reasonsEl = document.getElementById("reasons");
+    const riskFill = document.getElementById("riskFill");
+
+    if (!url) {
+        alert("Please enter a URL");
+        return;
+    }
+
+    try { new URL(url); }
+    catch {
+        alert("❌ Invalid URL. Example: https://example.com");
+        return;
+    }
+
+    loading.style.display = "block";
+    resultBox.style.display = "none";
+
+    fetch("http://127.0.0.1:5000/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url })
+    })
+    .then(res => res.json())
+    .then(data => {
+        loading.style.display = "none";
+        resultBox.style.display = "block";
+        reasonsEl.innerHTML = "";
+
+        let percent = Math.min(data.risk_score * 20, 100);
+        riskFill.style.width = percent + "%";
+
+        if (data.status === "PHISHING") {
+            resultBox.className = "result phish";
+            riskFill.style.background = "#ef4444";
+            statusEl.innerText = "❌ PHISHING URL";
+        } else if (data.status === "INVALID") {
+            resultBox.className = "result invalid";
+            riskFill.style.background = "#facc15";
+            statusEl.innerText = "⚠️ INVALID INPUT";
+        } else {
+            resultBox.className = "result safe";
+            riskFill.style.background = "#22c55e";
+            statusEl.innerText = "✅ SAFE URL";
+        }
+
+        scoreEl.innerText = "Risk Score: " + data.risk_score;
+
+        data.reasons.forEach(r => {
+            const li = document.createElement("li");
+            li.innerText = r;
+            reasonsEl.appendChild(li);
+        });
+    })
+    .catch(() => {
+        loading.style.display = "none";
+        alert("Backend not running. Start Flask server.");
+    });
+}
+
+// ✅ ENTER KEY SUPPORT
+document.getElementById("urlInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+        checkUrl();
+    }
+});
+</script>
+
+</body>
+</html>
